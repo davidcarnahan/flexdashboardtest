@@ -10,10 +10,10 @@ output:
 library(flexdashboard)
 
 # load vha data
-vha <- read.csv("/Users/davidcarnahan/Desktop/VHA_Facility_Quality_and_Safety_Report_Population_Quality_of_Care.csv", header = T, stringsAsFactors = F)
+vha <- read.csv("./Desktop/VHA_Facility_Quality_and_Safety_Report_Population_Quality_of_Care.csv", header = T, stringsAsFactors = F)
 
 # load lat-long data of us cities
-latlong <- read.csv("/Users/davidcarnahan/Definitive Logic/flexdashboards/uscitiesv1.csv", header = T, stringsAsFactors = F)
+latlong <- read.csv("./Definitive Logic/flexdashboards/uscitiesv1.csv", header = T, stringsAsFactors = F)
 
 ```
 
