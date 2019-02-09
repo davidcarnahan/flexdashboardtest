@@ -1,0 +1,189 @@
+---
+title: "VHA Population Quality & Safety Report"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+
+# load vha data
+vha <- read.csv("/Users/davidcarnahan/Desktop/VHA_Facility_Quality_and_Safety_Report_Population_Quality_of_Care.csv", header = T, stringsAsFactors = F)
+
+# load lat-long data of us cities
+latlong <- read.csv("/Users/davidcarnahan/Definitive Logic/flexdashboards/uscitiesv1.csv", header = T, stringsAsFactors = F)
+
+```
+
+Row
+---
+
+### VA Healthcare Centers with MH Inpatient Services
+
+```{r}
+library(dplyr)
+mhipservices <- vha %>%
+  select(In.House.Services.Acute.Mental.Health) %>%
+  mutate(yesnum = ifelse(grepl("Yes", vha$In.House.Services.Acute.Mental.Health), 1, 0)) %>%
+  summarise(sumyes = sum(yesnum))
+valueBox(mhipservices$sumyes, icon = "fa-bed", color = "goldenrod")
+```
+
+### VA Healthcare Centers without MH Inpatient Services
+
+```{r}
+library(dplyr)
+mhipservices <- vha %>%
+  select(In.House.Services.Acute.Mental.Health) %>%
+  mutate(nonum = ifelse(grepl("No", vha$In.House.Services.Acute.Mental.Health), 1, 0)) %>%
+  summarise(sumno = sum(nonum))
+valueBox(mhipservices$sumno, icon = "fa-ambulance", color = "olivedrab")
+```
+
+Row
+---
+
+### Map of VA Facilities
+
+```{r}
+library(dplyr)
+
+ll <- latlong %>%
+  select(city, state_id, lat, lng) %>%
+  mutate(City = city, ST = state_id, cityST = paste0(city, state_id)) %>%
+  select(City, ST, cityST, lat, lng) 
+
+vamap <- vha %>%
+  select(City, ST, VISN.Name, Facility.Name, Station, Complexity, 
+         In.House.Services.Acute.Mental.Health, In.House.Services.Acute.Med.Surg,
+         In.House.Services.Emergency.Dept, In.House.Services.Intensive.Care.Unit,
+         In.House.Services.Nursing.Home.Unit) %>%
+  mutate(cityST = paste0(City, ST)) %>%
+  filter(In.House.Services.Acute.Mental.Health == "Yes")
+
+valatlng1 <- inner_join(vamap, ll, by="cityST") %>%
+  mutate(color = ifelse(Complexity == "1a", "orange", 
+                 ifelse(Complexity == "1b", "green",
+                 ifelse(Complexity == "1c", "blue",
+                 ifelse(Complexity == "2", "maroon", "black")))))
+
+# Create a palette that maps factor levels to colors
+library(leaflet)
+leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(lat = valatlng1$lat, 
+             lng = valatlng1$lng, 
+             popup = paste("<b>Station:</b>", valatlng1$Station, "<br>", 
+                           "<b>VISN Name:</b>", valatlng1$VISN.Name, "<br>", 
+                           "<b>Facility Name:</b>", valatlng1$Facility.Name, "<br>",
+                           "<b>City, State:</b>", valatlng1$City.x, valatlng1$ST.x, "<br>",
+                           "<b>Complexity:</b>", valatlng1$Complexity, "<br>",
+                           "<b>Inpatient MH Services:</b>", valatlng1$In.House.Services.Acute.Mental.Health, "<br>", 
+                           "<b>Inpatient Med/Surgical Services:</b>", valatlng1$In.House.Services.Acute.Med.Surg, "<br>", 
+                           "<b>Emergency Medicine Services:</b>", valatlng1$In.House.Services.Emergency.Dept, "<br>",
+                           "<b>Intensive Care Unit Services:</b>", valatlng1$In.House.Services.Intensive.Care.Unit, "<br>",
+                           "<b>Nursing Home Services:</b>", valatlng1$In.House.Services.Nursing.Home.Unit, "<br>"),
+             radius = ifelse(grepl("1a|1b|1c", valatlng1$Complexity), 10, 6), 
+             color = valatlng1$color, 
+             stroke = FALSE, fillOpacity = 0.5) %>%
+  addLegend(position = "bottomleft", 
+           title = "Complexity",
+            labels = c("1a: High: Highest Complexity", 
+                       "1b: High: Second Highest Complexity", 
+                       "1c: High: Third Highest Complexity", 
+                       "2: Medium Complexity", 
+                       "3: Low Complexity"), 
+            colors = c("orange", "green", "blue", "maroon", "black"))
+
+```
+
+### Map of VA Facilities
+
+```{r}
+ll <- latlong %>%
+  select(city, state_id, lat, lng) %>%
+  mutate(City = city, ST = state_id, cityST = paste0(city, state_id)) %>%
+  select(City, ST, cityST, lat, lng) 
+
+vamap <- vha %>%
+  select(City, ST, VISN.Name, Facility.Name, Station, Complexity, 
+         In.House.Services.Acute.Mental.Health, In.House.Services.Acute.Med.Surg,
+         In.House.Services.Emergency.Dept, In.House.Services.Intensive.Care.Unit,
+         In.House.Services.Nursing.Home.Unit) %>%
+  mutate(cityST = paste0(City, ST)) %>%
+  filter(In.House.Services.Acute.Mental.Health == "No")
+
+valatlng2 <- inner_join(vamap, ll, by="cityST") %>%
+  mutate(color = ifelse(Complexity == "1a", "orange", 
+                 ifelse(Complexity == "1b", "green",
+                 ifelse(Complexity == "1c", "blue",
+                 ifelse(Complexity == "2", "maroon", "black")))))
+
+# Create a palette that maps factor levels to colors
+library(leaflet)
+leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(lat = valatlng2$lat, 
+             lng = valatlng2$lng, 
+             popup = paste("<b>Station:</b>", valatlng2$Station, "<br>", 
+                           "<b>VISN Name:</b>", valatlng2$VISN.Name, "<br>", 
+                           "<b>Facility Name:</b>", valatlng2$Facility.Name, "<br>",
+                           "<b>City, State:</b>", valatlng2$City.x, valatlng2$ST.x, "<br>",
+                           "<b>Complexity:</b>", valatlng2$Complexity, "<br>",
+                           "<b>Inpatient MH Services:</b>", valatlng2$In.House.Services.Acute.Mental.Health, "<br>", 
+                           "<b>Inpatient Med/Surgical Services:</b>", valatlng2$In.House.Services.Acute.Med.Surg, "<br>", 
+                           "<b>Emergency Medicine Services:</b>", valatlng2$In.House.Services.Emergency.Dept, "<br>",
+                           "<b>Intensive Care Unit Services:</b>", valatlng2$In.House.Services.Intensive.Care.Unit, "<br>",
+                           "<b>Nursing Home Services:</b>", valatlng2$In.House.Services.Nursing.Home.Unit, "<br>"),
+             radius = ifelse(grepl("1a|1b|1c", valatlng2$Complexity), 10, 6), 
+             color = valatlng2$color, 
+             stroke = FALSE, fillOpacity = 0.5) %>%
+  addLegend(position = "bottomleft", 
+           title = "Complexity",
+            labels = c("1a: High Complexity", 
+                       "1b: High Complexity", 
+                       "1c: High Complexity", 
+                       "2: Medium Complexity", 
+                       "3: Low Complexity"), 
+            colors = c("orange", "green", "blue", "maroon", "black"))
+
+```
+
+Row
+---
+
+### Graphical Representation of Relationships
+
+```{r}
+library(igraph)
+library(visNetwork)
+library(dplyr)
+
+n <- length(unique(valatlng1$VISN.Name))
+
+g <- make_tree(n, children = 10) %>%
+  set_vertex_attr("group", value = valatlng1$VISN.Name, n)
+  
+visIgraph(g, idToLabel = TRUE)
+V(g)$label <- valatlng1$Facility.Name
+
+```
+
+### Graphical Representation of Relationships
+
+```{r}
+library(igraph)
+library(visNetwork)
+library(dplyr)
+
+n <- length(unique(valatlng2$VISN.Name))
+
+g <- make_tree(n, children = 10) %>%
+  set_vertex_attr("group", value = valatlng2$VISN.Name, n)
+  
+visIgraph(g, idToLabel = TRUE)
+V(g)$label <- valatlng2$Facility.Name
+
+```
